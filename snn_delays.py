@@ -8,7 +8,6 @@ from layers import Dcls1d, LIF, LI, Dropout_Seq
 from model import Model
 from utils import set_seed
 
-from torch import Tensor
 import numpy as np
 
 
