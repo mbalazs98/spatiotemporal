@@ -4,7 +4,6 @@ import numpy as np
 
 from torch.utils.data import DataLoader, Dataset
 import torch
-from typing import Callable, Optional
 
 import tonic
 import tonic.transforms as transforms
