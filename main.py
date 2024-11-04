@@ -1,4 +1,4 @@
-from datasets import RawHD_dataloaders, DVSGesture_dataloaders
+from datasets import RawHD_dataloaders
 from best_config_RawHD import Config
 from snn_delays import SnnDelays
 import torch
@@ -20,10 +20,7 @@ print(f"===> Model type = {config.model_type}")
 print(f"===> Model size = {utils.count_parameters(model)}\n\n")
 
 
-if config.dataset == 'dvsgesture':
-    train_loader, valid_loader = DVSGesture_dataloaders(config)
-    test_loader = None
-elif config.dataset == 'rawhd':
+if config.dataset == 'rawhd':
     train_loader, valid_loader = RawHD_dataloaders(config)
     test_loader = None
 else:
