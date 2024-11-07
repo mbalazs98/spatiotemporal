@@ -134,9 +134,9 @@ class Dcls1d(Module):
         )
         if dynamic:
             if dalean:
-                self.sign = torch.broadcast_to(torch.sign(torch.from_numpy(np.random.randn(in_channels))), (out_channels, in_channels, kernel_count))
+                self.sign = Parameter(torch.tensor(torch.broadcast_to(torch.sign(torch.from_numpy(np.random.randn(in_channels, kernel_count))), (out_channels, in_channels, kernel_count))))
             else:
-                self.sign = torch.sign(torch.from_numpy(np.random.randn(out_channels, in_channels, kernel_count)))
+                self.sign = Parameter(torch.tensor(torch.sign(torch.from_numpy(np.random.randn(out_channels, in_channels, kernel_count)))))
         self.P = Parameter(
             torch.Tensor(
                 len(dilated_kernel_size),
