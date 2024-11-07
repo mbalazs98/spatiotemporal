@@ -3,7 +3,6 @@ class Config:
     ################################################
     #            General configuration             #
     ################################################
-    debug = False
 
     # dataset could be set to either 'shd', 'ssc' or 'gsc', change datasets_path accordingly.
     dataset = 'rawhd'                    
@@ -15,17 +14,13 @@ class Config:
     model_type = 'snn_delays'          
     
 
-    time_step = 10
-    n_bins = 5
-
     epochs = 150
     batch_size = 256
 
     ################################################
     #               Model Achitecture              #
     ################################################
-    spiking_neuron_type = 'lif'         # plif, lif
-    init_tau = 10.05                    # in ms, can't be < time_step
+    init_tau = 10.05       
 
 
     n_inputs = 40
@@ -36,7 +31,7 @@ class Config:
     sparsity_p = used_sparsities[1]
     l1_lambda = 0.01#1e-5
     dynamic = True
-
+    rigl = True
     dalean = True
 
     dropout_p = 0.4
@@ -83,7 +78,7 @@ class Config:
     decrease_sig_method = 'exp'
     kernel_count = 1
 
-    max_delay = 250//time_step
+    max_delay = 25
     max_delay = max_delay if max_delay%2==1 else max_delay+1 # to make kernel_size an odd number
     
     # For constant sigma without the decreasing policy, set model_type == 'snn_delays' and sigInit = 0.23 and final_epoch = 0
@@ -106,7 +101,7 @@ class Config:
     run_name = 'Run Name'
 
 
-    run_info = f'||{model_type}||{dataset}||{time_step}ms||bins={n_bins}'
+    run_info = f'||{model_type}||{dataset}||dynamic={dynamic}'
 
     run_name = run_name + f'||seed={seed}' + run_info
     
