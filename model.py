@@ -135,7 +135,7 @@ class Model(nn.Module):
 
                 for opt in optimizers: opt.zero_grad()
 
-                output, _ = self.forward(x)
+                output = self.forward(x)
                 loss = self.calc_loss(output, y)
                 for j in range(len(self.blocks)):
                     loss += self.config.l1_lambda * torch.norm(self.blocks[j][0][0].weight, 1)
@@ -177,7 +177,7 @@ class Model(nn.Module):
             ##################################    Eval Loop    #########################
 
 
-            loss_valid, metric_valid, spiking_activity = self.eval_model(valid_loader, device)
+            loss_valid, metric_valid = self.eval_model(valid_loader, device)
 
             loss_epochs['valid'].append(loss_valid)
             metric_epochs['valid'].append(metric_valid)
@@ -205,13 +205,6 @@ class Model(nn.Module):
                 print("# Saving best Metric model...")
                 torch.save(self.state_dict(), self.config.save_model_path.replace('REPL', 'Best_ACC'))
                 best_metric_val = metric_valid
-                exc, inh = [], []
-                if self.config.dynamic:
-                    for j in range(len(self.blocks)):
-                            exc.append(torch.sum((self.blocks[j][0][0].sign * self.mask[j].to(self.blocks[j][0][0].sign))==1).item())
-                            inh.append(torch.sum((self.blocks[j][0][0].sign * self.mask[j].to(self.blocks[j][0][0].sign))==-1).item())
-                
-                best_spiking_activity = spiking_activity
             
             if  loss_valid < best_loss_val:#  and (self.config.model_type != 'snn_delays' or epoch >= self.config.final_epoch - 1):
                 print("# Saving best Loss model...")
@@ -220,8 +213,6 @@ class Model(nn.Module):
             
             if  metric_test > best_metric_test:#  and (self.config.model_type != 'snn_delays' or epoch >= self.config.final_epoch - 1):
                 best_metric_test = metric_test
-            
-            print("ei ratio", [(e,i) for e,i in zip(exc,inh)], "spiking activity", best_spiking_activity)
 
 
 
@@ -239,7 +230,6 @@ class Model(nn.Module):
             self.round_pos()
 
             loss_batch, metric_batch = [], []
-            spiking_activity = [0] * (len(self.blocks)-1)
             for i, (x, y) in enumerate(tqdm(loader)):
 
                 y = F.one_hot(y, self.config.n_outputs).float()
@@ -247,10 +237,7 @@ class Model(nn.Module):
                 x = x.permute(1,0,2).float().to(device)
                 y = y.to(device)
 
-                output, spiking_activity_curr = self.forward(x)
-                for j in range(len(self.blocks)-1):
-                    spiking_activity[j] += spiking_activity_curr[j]
-
+                output = self.forward(x)
                 loss = self.calc_loss(output, y)
                 
                 metric = self.calc_metric(output, y)
@@ -271,4 +258,4 @@ class Model(nn.Module):
             else:
                 print(f"File '{eventid + '.pt'}' does not exist.")
 
-        return np.mean(loss_batch), np.mean(metric_batch), [sp/2264 for sp in spiking_activity]
+        return np.mean(loss_batch), np.mean(metric_batch)
