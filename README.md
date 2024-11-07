@@ -1,1 +1,1 @@
-# Spatio-temporal Structure of Excitation and Inhibition Emerges in Spiking Neural Networks with and without Biologically Plausible Constraints
+# Learning Delays Through Gradients and Through Structure: Emergence of Spatiotemporal Patterns in Spiking Neural Networks
