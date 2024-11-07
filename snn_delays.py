@@ -70,7 +70,6 @@ class SnnDelays(Model):
         self.positions = []
         self.weights = []
         self.weights_bn = []
-        self.weights_plif = []
         for m in self.model.modules():
             if isinstance(m, Dcls1d):
                 self.positions.append(m.P)
@@ -97,7 +96,6 @@ class SnnDelays(Model):
                         #er_sparsity_p = self.config.sparsity_p * (1 - (sum(self.blocks[i][0][0].weight.shape)) / (torch.numel(self.blocks[i][0][0].weight)))
                         #num_connections = int((1-er_sparsity_p) * torch.numel(self.blocks[i][0][0].weight))
                         num_connections = int((1-self.config.sparsity_p) * torch.numel(self.blocks[i][0][0].weight))
-                        #print(num_connections, num_connections2)
                         ind = np.random.choice(np.arange(torch.numel(self.blocks[i][0][0].weight)),size=num_connections,replace=False)
                         is_con[ind] = True
                         is_con = is_con.reshape(self.blocks[i][0][0].weight.shape)
@@ -140,28 +138,26 @@ class SnnDelays(Model):
                         num_connections = int((1-self.config.sparsity_p) * torch.numel(self.blocks[i][0][0].weight))
                         #num_connections = int((1-er_sparsity_p) * torch.numel(self.blocks[i][0][0].weight))
                         nb_reconnect = num_connections - n_connected
-                        '''
-                        reconnect_candidate_coord = (~is_con).nonzero()
-                        reconnect_sample_id = torch.randperm(len(reconnect_candidate_coord))[:int(nb_reconnect)]
-                        reconnect_sample_id = torch.randperm(len(reconnect_candidate_coord))[:int(nb_reconnect)]
-                        chosen_ind = reconnect_candidate_coord[reconnect_sample_id].T
-                        if nb_reconnect > 0:
-                            with torch.no_grad():
-                                self.blocks[i][0][0].weight[chosen_ind[0], chosen_ind[1]] = 1e-12
-                        '''
-                        self.grad[i][is_con] = float('-inf')
-                        # Flatten the grad tensor to apply sorting across all dimensions
-                        flattened_grad = self.grad[i].view(-1)
-                        reconnect_sample_id = torch.sort(flattened_grad, descending=True)[1][:int(nb_reconnect)]
-                        if nb_reconnect > 0:
-                            with torch.no_grad():
-                                # Unravel the flat indices to get multi-dimensional indices
-                                unraveled_indices = torch.unravel_index(reconnect_sample_id, self.grad[i].shape)
-
-                                # Update the corresponding values in self.weight
-                                self.blocks[i][0][0].weight[unraveled_indices] = 1e-12
+                        if self.config.rigl:
+                            self.grad[i][is_con] = float('inf')
+                            # Flatten the grad tensor to apply sorting across all dimensions
+                            flattened_grad = self.grad[i].view(-1)
+                            reconnect_sample_id = torch.sort(flattened_grad, descending=False)[1][:int(nb_reconnect)]
+                            if nb_reconnect > 0:
+                                with torch.no_grad():
+                                    unraveled_indices = torch.unravel_index(reconnect_sample_id, self.grad[i].shape)
+                                    self.blocks[i][0][0].weight[unraveled_indices] = 1e-12
+                        else:
+                            reconnect_candidate_coord = (~is_con).nonzero()
+                            reconnect_sample_id = torch.randperm(len(reconnect_candidate_coord))[:int(nb_reconnect)]
+                            reconnect_sample_id = torch.randperm(len(reconnect_candidate_coord))[:int(nb_reconnect)]
+                            chosen_ind = reconnect_candidate_coord[reconnect_sample_id].T
+                            if nb_reconnect > 0:
+                                with torch.no_grad():
+                                    self.blocks[i][0][0].weight[chosen_ind[0], chosen_ind[1]] = 1e-12    
                         
                         assert int(torch.sum(self.blocks[i][0][0].weight > 0)) == num_connections
+
 
 
         # We use clamp_parameters of the Dcls1d modules
@@ -197,7 +193,6 @@ class SnnDelays(Model):
 
 
     def forward(self, x):
-        spiking_activity = [0] * (self.config.n_hidden_layers)
         for block_id in range(self.config.n_hidden_layers):
             # x is permuted: (time, batch, neurons) => (batch, neurons, time)  in order to be processed by the convolution
             x = x.permute(1,2,0)
@@ -225,7 +220,6 @@ class SnnDelays(Model):
             # we use our spiking neuron filter
             spikes = self.blocks[block_id][1][0](x)
             # we use dropout on generated spikes tensor
-            spiking_activity[block_id] += torch.sum(spikes).item()/spikes.shape[2]
 
             x = self.blocks[block_id][1][1](spikes)
             
@@ -244,7 +238,7 @@ class SnnDelays(Model):
         out = self.blocks[-1][1][0](out)
 
 
-        return out, spiking_activity
+        return out
     
 
     def round_pos(self):
